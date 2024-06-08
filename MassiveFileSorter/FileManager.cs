@@ -15,7 +15,7 @@ public static class FileManager
             return;
         }
 
-        const int maxChunks = 50;
+        const int maxChunks = 150;
 
         var tasks = new List<Task>();
         await using var fileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read,
@@ -72,7 +72,6 @@ public static class FileManager
                     {
                         return value;
                     }
-
                     return 0;
                 }))
                 .ToList();

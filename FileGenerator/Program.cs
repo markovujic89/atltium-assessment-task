@@ -3,7 +3,7 @@
 using FileGenerator;
 
 string outputFilePath = @"C:\Temp\input.txt";
-long targetSizeInBytes = 1L * 1024 * 1024 * 1024; // 50 GB
+long targetSizeInBytes = 2L * 1024 * 1024 * 1024; // 3 GB
 int numberOfTasks = Environment.ProcessorCount; // Number of tasks equal to the number of CPU cores
 
 // Calculate size per task
@@ -20,12 +20,6 @@ Task.WaitAll(tasks);
 
 // Concatenate partial files
 InputFileGenerator.ConcatenateFiles(outputFilePath, numberOfTasks);
-
-// // Clean up partial files
-// for (int i = 0; i < numberOfTasks; i++)
-// {
-//     File.Delete($"input_{i}.txt");
-// }
 
 Console.WriteLine("File generation complete.");
 
