@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileGenerator", "FileGenerator\FileGenerator.csproj", "{C058663F-E575-4AB8-AE36-014B897EF7F1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MassiveFileSorter", "MassiveFileSorter\MassiveFileSorter.csproj", "{151EB884-09C7-4A79-B848-BB1423A59636}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{C058663F-E575-4AB8-AE36-014B897EF7F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C058663F-E575-4AB8-AE36-014B897EF7F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C058663F-E575-4AB8-AE36-014B897EF7F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{151EB884-09C7-4A79-B848-BB1423A59636}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{151EB884-09C7-4A79-B848-BB1423A59636}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{151EB884-09C7-4A79-B848-BB1423A59636}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{151EB884-09C7-4A79-B848-BB1423A59636}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
