@@ -1,4 +1,7 @@
-﻿namespace FileGenerator;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+
+namespace FileGenerator;
 
 internal static class InputFileGenerator
 {
@@ -16,8 +19,13 @@ internal static class InputFileGenerator
                 var randomNumberPrefix = random.Next(1, 1500);
                 var randomNumber = random.Next(1, 1000);
                 string line = $"{randomNumberPrefix}.Apple_{randomNumber}";
-                writer.WriteLine(line);
-                currentSizeInBytes += System.Text.Encoding.UTF8.GetByteCount(line + Environment.NewLine);
+
+                // Validate the format before writing
+                if (IsValidLine(line))
+                {
+                    writer.WriteLine(line);
+                    currentSizeInBytes += Encoding.UTF8.GetByteCount(line + Environment.NewLine);
+                }
             }
         }
 
@@ -33,5 +41,23 @@ internal static class InputFileGenerator
             using var input = new FileStream(partialFilePath, FileMode.Open);
             input.CopyTo(output);
         }
+    }
+    
+    private static bool IsValidLine(string line)
+    {
+        
+        if (string.IsNullOrEmpty(line))
+        {
+            return false;
+        }
+
+        var parts = line.Split('.');
+
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        return true;
     }
 }

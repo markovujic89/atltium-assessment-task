@@ -1,9 +1,11 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace MassiveFileSorter;
 
 public static class FileManager
 {
+    private const int MaxChunks = 50;
     public static async Task DivideFileIntoChunksParallel(string inputFilePath, string tempDirectory)
     {
         var stopwatch = new Stopwatch();
@@ -14,16 +16,14 @@ public static class FileManager
             Console.WriteLine($"Input file '{inputFilePath}' not found.");
             return;
         }
-
-        const int maxChunks = 150;
-
+        
         var tasks = new List<Task>();
         await using var fileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read,
-            bufferSize: 4096, useAsync: true);
+            bufferSize:  4096, useAsync: true);
         long totalSize = fileStream.Length;
-        long chunkSize = (long)Math.Ceiling((double)totalSize / maxChunks);
+        long chunkSize = (long)Math.Ceiling((double)totalSize / MaxChunks);
 
-        for (long i = 0; i < maxChunks; i++)
+        for (long i = 0; i < MaxChunks; i++)
         {
             long chunkStart = i * chunkSize;
             if (chunkStart >= totalSize)
@@ -42,21 +42,26 @@ public static class FileManager
     {
         byte[] buffer = new byte[chunkSize];
         fileStream.Seek(chunkStart, SeekOrigin.Begin);
-        int bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length);
+        var bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length);
 
         if (bytesRead > 0)
         {
             var lines = await ConvertBytesToText(buffer, bytesRead);
             
             var groupedLines = SortAndGroupLines(lines);
-
-            // Write the sorted data to a new chunk file
+            Console.WriteLine($"Sorting is over {chunkIndex}");
+            
             string chunkFilePath = Path.Combine(tempDirectory, $"chunk_{chunkIndex}.txt");
-            await using var writer = new StreamWriter(chunkFilePath, false);
 
-            foreach (var value in groupedLines)
+            // Use a larger buffer size for the StreamWriter
+            await using var writer = new StreamWriter(chunkFilePath, false, Encoding.UTF8, 65536); // 64 KB buffer size
+
+            // Batch write lines to reduce I/O operations
+            const int batchSize = 1000;
+            for (int i = 0; i < groupedLines.Count; i += batchSize)
             {
-                await writer.WriteLineAsync(value);
+                var batch = groupedLines.Skip(i).Take(batchSize);
+                await writer.WriteAsync(string.Join(Environment.NewLine, batch) + Environment.NewLine);
             }
         }
     }
@@ -76,24 +81,35 @@ public static class FileManager
 
     private static List<string> SortAndGroupLines(List<string> lines)
     {
-        var groupedLines = lines
-            .GroupBy(line =>
+        var groupedLinesDictionary = new Dictionary<string, List<string>>();
+
+        // Iterate over each line in the list
+        foreach (var line in lines)
+        {
+            var split = line.Split('.');
+
+            // Check if the split result has at least 2 elements
+            if (split.Length >= 2)
             {
-                var split = line.Split('.');
-                return split.ElementAtOrDefault(1);
-            })
-            .OrderBy(group => group.Key)
-            .SelectMany(group => group.OrderBy(line =>
-            {
-                var split = line.Split('.');
-                if (split.Length >= 1 && int.TryParse(split[0], out var value))
+                var key = split[1];
+
+                // If the key doesn't exist in the dictionary, add it
+                if (!groupedLinesDictionary.ContainsKey(key))
                 {
-                    return value;
+                    groupedLinesDictionary[key] = new List<string>();
                 }
 
-                return 0;
-            }))
+                // Add the line to the corresponding key's list
+                groupedLinesDictionary[key].Add(line);
+            }
+        }
+
+        // Flatten the dictionary values into a single list
+        var groupedLines = groupedLinesDictionary
+            .SelectMany(kv => kv.Value)
             .ToList();
+
         return groupedLines;
+        
     }
 }
