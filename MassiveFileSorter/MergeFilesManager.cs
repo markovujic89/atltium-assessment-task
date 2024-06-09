@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Text;
 
 namespace MassiveFileSorter;
 
@@ -18,7 +18,8 @@ public static class MergeFilesManager
 
         await Task.WhenAll(tasks);
 
-        await using (var writer = new StreamWriter(outputFilePath))
+        // Use a larger buffer size for StreamWriter
+        await using (var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8, 65536)) // 64 KB buffer size
         {
             while (minHeap.Count > 0)
             {
