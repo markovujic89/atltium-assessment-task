@@ -46,35 +46,9 @@ public static class FileManager
 
         if (bytesRead > 0)
         {
-            // Convert the byte array to a list of strings (lines)
-            var lines = new List<string>();
-            using (var memoryStream = new MemoryStream(buffer, 0, bytesRead))
-            using (var reader = new StreamReader(memoryStream))
-            {
-                while (await reader.ReadLineAsync() is { } line)
-                {
-                    lines.Add(line);
-                }
-            }
-
-            // Sort the lines with grouping logic
-            var groupedLines = lines
-                .GroupBy(line =>
-                {
-                    var split = line.Split('.');
-                    return split.ElementAtOrDefault(1);
-                })
-                .OrderBy(group => group.Key)
-                .SelectMany(group => group.OrderBy(line =>
-                {
-                    var split = line.Split('.');
-                    if (split.Length >= 1 && int.TryParse(split[0], out var value))
-                    {
-                        return value;
-                    }
-                    return 0;
-                }))
-                .ToList();
+            var lines = await ConvertBytesToText(buffer, bytesRead);
+            
+            var groupedLines = SortAndGroupLines(lines);
 
             // Write the sorted data to a new chunk file
             string chunkFilePath = Path.Combine(tempDirectory, $"chunk_{chunkIndex}.txt");
@@ -85,5 +59,41 @@ public static class FileManager
                 await writer.WriteLineAsync(value);
             }
         }
+    }
+
+    private static async Task<List<string>> ConvertBytesToText(byte[] buffer, int bytesRead)
+    {
+        var lines = new List<string>();
+        using var memoryStream = new MemoryStream(buffer, 0, bytesRead);
+        using var reader = new StreamReader(memoryStream);
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            lines.Add(line);
+        }
+
+        return lines;
+    }
+
+    private static List<string> SortAndGroupLines(List<string> lines)
+    {
+        var groupedLines = lines
+            .GroupBy(line =>
+            {
+                var split = line.Split('.');
+                return split.ElementAtOrDefault(1);
+            })
+            .OrderBy(group => group.Key)
+            .SelectMany(group => group.OrderBy(line =>
+            {
+                var split = line.Split('.');
+                if (split.Length >= 1 && int.TryParse(split[0], out var value))
+                {
+                    return value;
+                }
+
+                return 0;
+            }))
+            .ToList();
+        return groupedLines;
     }
 }
