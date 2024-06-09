@@ -5,7 +5,7 @@ namespace MassiveFileSorter;
 
 public static class FileManager
 {
-    private const int MaxChunks = 50;
+    private const int MaxChunks = 16;
     public static async Task DivideFileIntoChunksParallel(string inputFilePath, string tempDirectory)
     {
         var stopwatch = new Stopwatch();

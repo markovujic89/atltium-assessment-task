@@ -3,7 +3,7 @@
 using FileGenerator;
 
 string outputFilePath = @"C:\Temp\input.txt";
-long targetSizeInBytes = 1L * 1024 * 1024 * 1024; // 3 GB
+long targetSizeInBytes = 1L * 1024 * 1024 * 1024; // 2 GB
 int numberOfTasks = Environment.ProcessorCount; // Number of tasks equal to the number of CPU cores
 
 // Calculate size per task
