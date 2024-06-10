@@ -13,7 +13,6 @@ public static class MergeFilesManager
         {
             var mergedFilePaths = new ConcurrentBag<string>();
 
-            // Use Parallel.ForEach to merge files in parallel
             var paths = sortedFilePaths;
             await Task.WhenAll(
                 Partitioner.Create(0, sortedFilePaths.Count, 2).GetPartitions(Environment.ProcessorCount).Select(
@@ -23,22 +22,7 @@ public static class MergeFilesManager
                         {
                             while (partition.MoveNext())
                             {
-                                var range = partition.Current;
-                                if (range.Item2 - range.Item1 == 2)
-                                {
-                                    var mergedFilePath = Path.Combine(tempDirectory, $"merged_{Guid.NewGuid()}.txt");
-                                    await MergeTwoFilesAsync(paths[range.Item1], paths[range.Item1 + 1],
-                                        mergedFilePath);
-                                    mergedFilePaths.Add(mergedFilePath);
-
-                                    // Clean up old files
-                                    File.Delete(paths[range.Item1]);
-                                    File.Delete(paths[range.Item1 + 1]);
-                                }
-                                else if (range.Item2 - range.Item1 == 1)
-                                {
-                                    mergedFilePaths.Add(paths[range.Item1]);
-                                }
+                                await ExecuteFilesMerge(tempDirectory, partition, paths, mergedFilePaths);
                             }
                         }
                     })
@@ -47,50 +31,70 @@ public static class MergeFilesManager
             sortedFilePaths = mergedFilePaths.ToList();
         }
 
-        // Rename the final merged file to the output file path
         File.Move(sortedFilePaths[0], outputFilePath);
+    }
+
+    private static async Task ExecuteFilesMerge(string tempDirectory, IEnumerator<Tuple<int, int>> partition,
+        List<string> paths,
+        ConcurrentBag<string> mergedFilePaths)
+    {
+        var range = partition.Current;
+        if (range.Item2 - range.Item1 == 2)
+        {
+            var mergedFilePath = Path.Combine(tempDirectory, $"merged_{Guid.NewGuid()}.txt");
+            await MergeTwoFilesAsync(paths[range.Item1], paths[range.Item1 + 1],
+                mergedFilePath);
+            mergedFilePaths.Add(mergedFilePath);
+
+            // Clean up old files
+            File.Delete(paths[range.Item1]);
+            File.Delete(paths[range.Item1 + 1]);
+        }
+        else if (range.Item2 - range.Item1 == 1)
+        {
+            mergedFilePaths.Add(paths[range.Item1]);
+        }
     }
 
     private static async Task MergeTwoFilesAsync(string file1, string file2, string outputFile)
     {
-        using var reader1 = new StreamReader(file1, Encoding.UTF8, false, 65536); // 64 KB buffer size
-        using var reader2 = new StreamReader(file2, Encoding.UTF8, false, 65536); // 64 KB buffer size
+        using var streamReaderOne = new StreamReader(file1, Encoding.UTF8, false, 65536); // 64 KB buffer size
+        using var streamReaderTwo = new StreamReader(file2, Encoding.UTF8, false, 65536); // 64 KB buffer size
         await using var writer = new StreamWriter(outputFile, false, Encoding.UTF8, 65536); // 64 KB buffer size
-
-        // Use a list to batch write lines for better performance
+        
         var buffer = new List<string>(1000); // Adjust size as needed
 
-        string? line1 = await reader1.ReadLineAsync();
-        string? line2 = await reader2.ReadLineAsync();
+        string? lineOne = await streamReaderOne.ReadLineAsync();
+        string? lineTwo = await streamReaderTwo.ReadLineAsync();
 
-        while (line1 != null && line2 != null)
+        while (lineOne != null && lineTwo != null)
         {
-            var split1 = line1.Split('.');
-            var split2 = line2.Split('.');
+            var splitOne = lineOne.Split('.');
+            var splitTwo = lineTwo.Split('.');
 
-            var key1 = split1.Length > 1 ? split1[1] : null;
-            var key2 = split2.Length > 1 ? split2[1] : null;
+            var key1 = splitOne.Length > 1 ? splitOne[1] : null;
+            var key2 = splitTwo.Length > 1 ? splitTwo[1] : null;
 
             if (key1 != null && key2 != null)
             {
                 if (string.Compare(key1, key2, StringComparison.Ordinal) <= 0)
                 {
-                    buffer.Add(line1);
-                    line1 = await reader1.ReadLineAsync();
+                    buffer.Add(lineOne);
+                    lineOne = await streamReaderOne.ReadLineAsync();
                 }
                 else
                 {
-                    buffer.Add(line2);
-                    line2 = await reader2.ReadLineAsync();
+                    buffer.Add(lineTwo);
+                    lineTwo = await streamReaderTwo.ReadLineAsync();
                 }
             }
             else
             {
-                buffer.Add(line1);
-                line1 = await reader1.ReadLineAsync();
+                buffer.Add(lineOne);
+                lineOne = await streamReaderOne.ReadLineAsync();
 
-                buffer.Add(line2);
-                line2 = await reader2.ReadLineAsync();
+                buffer.Add(lineTwo);
+                lineTwo = await streamReaderTwo.ReadLineAsync();
             }
 
             // Write buffer to file if it reaches capacity
@@ -102,10 +106,10 @@ public static class MergeFilesManager
         }
 
         // Write any remaining lines
-        while (line1 != null)
+        while (lineOne != null)
         {
-            buffer.Add(line1);
-            line1 = await reader1.ReadLineAsync();
+            buffer.Add(lineOne);
+            lineOne = await streamReaderOne.ReadLineAsync();
             if (buffer.Count >= 1000)
             {
                 await writer.WriteLineAsync(string.Join(Environment.NewLine, buffer));
@@ -113,18 +117,17 @@ public static class MergeFilesManager
             }
         }
 
-        while (line2 != null)
+        while (lineTwo != null)
         {
-            buffer.Add(line2);
-            line2 = await reader2.ReadLineAsync();
+            buffer.Add(lineTwo);
+            lineTwo = await streamReaderTwo.ReadLineAsync();
             if (buffer.Count >= 1000)
             {
                 await writer.WriteLineAsync(string.Join(Environment.NewLine, buffer));
                 buffer.Clear();
             }
         }
-
-        // Write any remaining buffer content to file
+        
         if (buffer.Count > 0)
         {
             await writer.WriteLineAsync(string.Join(Environment.NewLine, buffer));

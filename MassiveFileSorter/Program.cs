@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using MassiveFileSorter;
 
+// Set up input and output paths
 string tempDirectory = @"C:\Temp\temp_chunks";
 string outputFilePath = @"C:\Temp\sorted_largefile.txt";
 
@@ -14,12 +15,12 @@ await FileManager.DivideFileIntoChunksParallel(@"C:\Temp\input.txt", tempDirecto
 Console.WriteLine("File divided into chunks finished!!.");
 Console.WriteLine($"Elapsed time: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds}");
 
-Console.WriteLine("Starting to merge!!.");
-var stopwatchForMerge = new Stopwatch();
-stopwatchForMerge.Start();
+Console.WriteLine("Starting to merge!!");
+var stopwatchForMergeProcess = new Stopwatch();
+stopwatchForMergeProcess.Start();
 await MergeFilesManager.MergeSortedChunksAsync(tempDirectory, outputFilePath);
-Console.WriteLine($"Elapsed time: {stopwatchForMerge.Elapsed.Minutes}:{stopwatchForMerge.Elapsed.Seconds}");
-stopwatchForMerge.Stop();
+Console.WriteLine($"Elapsed time for merging: {stopwatchForMergeProcess.Elapsed.Minutes}:{stopwatchForMergeProcess.Elapsed.Seconds}");
+stopwatchForMergeProcess.Stop();
 
 stopwatch.Stop();
 
